@@ -1,0 +1,63 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main      # Trigger pipeline when pushing to 'main' branch
+  pull_request:
+    branches:
+      - main      # Trigger pipeline for pull requests to 'main' branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Choose the OS for the CI environment
+
+    steps:
+    # Step 1: Check out the code
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # Step 2: Set up Docker Buildx for multi-platform builds (if needed)
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    # Step 3: Log into Docker Hub (if pushing to a private registry)
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    # Step 4: Build Docker image
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/calculator-webapp .
+
+    # Step 5: Push Docker image to Docker Hub (or any container registry)
+    - name: Push Docker image to Docker Hub
+      run: |
+        docker push ${{ secrets.DOCKER_USERNAME }}/calculator-webapp
+
+    # Step 6: Run tests (optional, if you have unit tests or integration tests)
+    - name: Run tests
+      run: |
+        # Add your testing commands here (e.g., running your test suite)
+        echo "Running tests..."
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.web_url }}
+
+    steps:
+    # Step 7: Deploy the application to a server or cloud (e.g., AWS, GCP)
+    - name: Deploy to Server (Example with Docker Compose)
+      run: |
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} user@your-server-ip "
+          cd /path/to/your/app &&
+          docker-compose pull &&
+          docker-compose up -d
+        "
+        
